@@ -1,0 +1,123 @@
+<html>
+
+<head>
+<title>Practical Machine Learning Project</title>
+</head>
+
+<body>
+
+<h1>Submitted by Rekha Vaidyanathan</h1>
+<h2>Data Preparation</h2>
+
+<p>Read the Training and Testing Set</p>
+<!--begin.rcode
+trainingSet<- read.csv("pml-training.csv")
+testdata<-read.csv("pml-testing.csv")
+
+end.rcode-->
+<p>Import useful libraries</p>
+<!--begin.rcode
+library(randomForest)
+library(caret)
+library(e1071)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+end.rcode-->
+<p>Select the valid columns related to features</p>
+<!--begin.rcode
+sensorColumns = grep(pattern = "_belt|_arm|_dumbbell|_forearm", names
+(trainingSet))
+newTrainingSet=trainingSet[,c(sensorColumns,160)]
+dim(newTrainingSet)
+end.rcode-->
+
+<p>Clean the Dataset by removing missing data ("NA"" data) and handle Non-Zero values </p>
+<!--begin.rcode
+missingData=is.na(newTrainingSet)
+omitcolumns=which(colSums(missingData)>12000)
+T = newTrainingSet[,-omitcolumns]
+dim(T)
+nzv<-nearZeroVar(T,saveMetrics=TRUE)
+newT<-T[,nzv$nzv==FALSE]
+dim(newT)
+
+end.rcode-->
+<p>Treat the Test data similar to Training data.Keep only the columns obtained after treatment of data in Training set. Remove the last column containing class information</p>
+<!--begin.rcode
+colForTest<-colnames(training[,-53])
+testingData<-testdata[colForTest]
+dim(testingData)
+
+end.rcode-->
+<p>Coerce the data according to treated Training Set</p>
+<!--begin.rcode
+
+for (i in 1:length(testingData) ) {
+    for(j in 1:length(training)) {
+         if( length( grep(names(training[i]), names(testingData)[j]) ) == 1) 
+ {
+             class(testingData[j]) <- class(training[i])
+         }      
+     }      
+ }
+
+ dim(testingData)
+
+end.rcode-->
+<p>Split to training and test set with 60:40 </p>
+<!--begin.rcode
+train<-createDataPartition(y=newT$classe,p=0.6,list=FALSE)
+training<-T[train,]
+dim(training)
+
+testing<-T[-train,]
+dim(testing)
+end.rcode-->
+<h2> Using Machine Learnign for Prediction</h2>
+<h3>Prediction using Random Forest Model </h3>
+<!--begin.rcode
+fitRF<-randomForest(classe~.,data=training)
+predictRF<-predict(fitRF,testing,type="class")
+confMatrix<-confusionMatrix(predictRF,testing$classe)
+
+end.rcode-->
+<h3>Fit Model using CART </h3>
+<!--begin.rcode
+modrpart<-rpart(classe~.,data=training,method="class")
+
+
+end.rcode-->
+<p>Plot Tree</p>
+
+<!--begin.rcode fig.width=10, fig.height=12
+fancyRpartPlot(modrpart)
+end.rcode-->
+
+<h3>Prediction using CART </h3>
+<!--begin.rcode
+predictRpart<-predict(modrpart,testing,type="class")
+conf<-confusionMatrix(predictRpart,testing,type="class")
+
+end.rcode-->
+<h3>Better Results obtained using Random Forest.
+Prediction of Test Data using Random Forest Model </h3>
+<!--begin.rcode
+
+predictRF<-predict(fitRF,testing,type="class")
+confMatrix<-confusionMatrix(predictRF,testingData$classe)
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(predictRF)
+end.rcode-->
+
+
+</body>
+</html>
